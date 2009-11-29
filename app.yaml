@@ -1,0 +1,24 @@
+application: lostriver-net
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+
+- url: /robots.txt
+  static_files: robots.txt
+  upload: robots.txt
+  secure: optional
+
+- url: /cachecontrol.py
+  script: cachecontrol.py
+  secure: optional
+
+- url: /wp-content/uploads
+  static_dir: wp-static/wp-content/uploads
+  expiration: "1h"
+  secure: optional
+
+- url: /.*
+  script: edu.py
+  secure: optional
