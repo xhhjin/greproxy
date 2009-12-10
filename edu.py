@@ -18,7 +18,7 @@ from google.appengine.api import users
 
 ######################## Setting area below ########################
 
-TARGET_URL_SHORTER = "edu.lostriver.net"    #the domain which GAE fetch from
+TARGET_URL_SHORTER = "drip.lostriver.net"   #the domain which GAE fetch from
 PROXY_SER_URL = "www.lostriver.net"         #domain of your GAE app
 APP_ID = "lostriver-net"                    #the app-id of GAE
 SHORTLINK_URL = "s.lostriver.net"           #the short-links domain
@@ -95,25 +95,24 @@ class MainPage(webapp.RequestHandler):
         # body
         content = '<h1>Oops!</h1><p>Error Code: %d<p>Message: <br><br>%s' % (status, description)
         self.response.out.write(content)
-        self.loggingreq(500, \
-                        0, \
-                        False)
+#        self.loggingreq(500, 0, False)
 
   def get_cached_response(self, item):
     modified_response_content = {}
     modified_response_content = memcache.get(item)
     if modified_response_content is not None:
+        if_content = True
         for name, address in self.request.headers.items():
           for name2, address2 in modified_response_content.items():
-              if name.lower() == "if-none-match" and name2.lower() == "etag":
+              if name.lower() == "if-none-match" \
+                 and name2.lower() == "etag" \
+                 and address == address2:
                         if_content = False
                         modified_response_content["code"] = 304
-              else:
-                        if_content = True
         self.content_response(modified_response_content, if_content)
-        self.loggingreq(modified_response_content["code"], \
+        '''self.loggingreq(modified_response_content["code"], \
                 len(modified_response_content["main_content"]), \
-                True)
+                True)'''
         return True
     else:
         return False
@@ -186,6 +185,11 @@ class MainPage(webapp.RequestHandler):
               response_content["main_content"] = re.sub(PROXY_SER_URL, \
                                                         APP_ID_HOST, \
                                                         response_content["main_content"])
+        #Strip DRIP Host ADs
+          response_content["main_content"]=re.sub( \
+              r"<CENTER>[\s\S]*?</CENTER>", '', response_content["main_content"])
+          response_content["main_content"]=re.sub( \
+              r"<CENTER>[\s\S]*?</CENTER>", '', response_content["main_content"])
           self.response.out.write(response_content["main_content"])
 
   def cache_content(self, item, to_be_cached):
@@ -204,7 +208,7 @@ class MainPage(webapp.RequestHandler):
                     #refresh the memcache of referer page
                     #often do not work very well due to the structure of site.
                     self.cache_content(item ,self.fetch_content(urlfetch.GET, item, {}))
-        self.loggingreq(fetched_content["code"], len(fetched_content["main_content"]), False)
+#        self.loggingreq(fetched_content["code"], len(fetched_content["main_content"]), False)
     else:
         count = memcache.get("pending_post_no")
         if count is not None:
@@ -230,7 +234,8 @@ class MainPage(webapp.RequestHandler):
   def get(self, base_url):
     if self.request.host == "t.lostriver.net":
         self.redirect("http://twitter.com/LucienLu")
-    elif self.request.host == SHORTLINK_URL:
+    elif ((self.request.host == "s.lostriver.net") or \
+          (self.request.host == "s." + APP_ID + ".appspot.com")):
         short_item = db.get(db.Key.from_path('Short_links', 'N:%s' % self.request.path_qs))
         if not short_item:
             self.response.set_status(404, None)
@@ -252,18 +257,21 @@ Visit home page <a href="http://www.lostriver.net/">http://www.lostriver.net/</a
             q = db.GqlQuery("select * from Short_links order by create_time desc")
             results = q.fetch(1000)
             for r in results:
-                self.response.out.write('''<tr><td><a rel="nofollow" target="_blank" href="http://''' \
-                                        + SHORTLINK_URL + r.url_short + '">' + r.url_redirect_to + \
+                self.response.out.write('''<tr><td><a rel="nofollow" target="_blank" href="''' \
+                                        + r.url_short + '">' + r.url_redirect_to + \
                                         '</a></td>')
                 self.response.out.write('<td>' + str(r.count) + '</td>')
                 self.response.out.write('<td>' + str(r.create_time) + '</td></tr>')
             self.response.out.write('''</table><br><center>CopyRight2009 <font color=blue>lostriver.net</font><br>
 					Powered by <a rel="nofollow" target="_blank" href="http://code.google.com/intl/zh-CN/appengine/">Google AppEngine</a></center></body></html>''')
         else:
-            self.redirect(short_item.url_redirect_to)
+            self.response.out.write('''<html><head><title>Redirecting...</title></head>
+<body><h1>Redirecting...</h1><script type="text/javascript"><!--
+window.parent.location = "%s"
+//--></script></body></html>''' % short_item.url_redirect_to)
             short_item.count +=1
             short_item.put()
-            self.loggingreq(302, 0, False)
+#            self.loggingreq(302, 0, False)
     elif self.request.host == APP_ID_HOST and self.request.environ["SERVER_PORT"] == "80" and IF_FORCE_HTTPS:
         self.redirect("https://" + APP_ID_HOST + "/")
     else:
@@ -275,9 +283,9 @@ Visit home page <a href="http://www.lostriver.net/">http://www.lostriver.net/</a
               if fetched_content is not None:  
                 self.content_response(fetched_content, True)
                 self.cache_content(item, fetched_content)
-                self.loggingreq(fetched_content["code"], \
+                '''self.loggingreq(fetched_content["code"], \
                                 len(fetched_content["main_content"]), \
-                                False)
+                                False)'''
         else:
             fetched_content = self.fetch_content(urlfetch.GET ,item, self.request.headers)
             if fetched_content is not None:
@@ -285,9 +293,9 @@ Visit home page <a href="http://www.lostriver.net/">http://www.lostriver.net/</a
                     self.content_response(fetched_content, False)
                 else:
                     self.content_response(fetched_content, True)
-                self.loggingreq(fetched_content["code"], \
+                '''self.loggingreq(fetched_content["code"], \
                                 len(fetched_content["main_content"]), \
-                                False)
+                                False)'''
 
 application = webapp.WSGIApplication([
                 (r"([\s\S]*)", MainPage)
