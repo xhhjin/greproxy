@@ -186,16 +186,21 @@ class MainPage(webapp.RequestHandler):
                                                         APP_ID_HOST, \
                                                         response_content["main_content"])
         #Strip DRIP Host ADs
-          response_content["main_content"]=re.sub( \
+          '''response_content["main_content"]=re.sub( \
               r"<CENTER>[\s\S]*?</CENTER>", '', response_content["main_content"])
           response_content["main_content"]=re.sub( \
               r"<CENTER>[\s\S]*?</CENTER>", '', response_content["main_content"])
-          self.response.out.write(response_content["main_content"])
+          self.response.out.write(response_content["main_content"])'''
 
   def cache_content(self, item, to_be_cached):
       if to_be_cached["code"] in TO_BE_CACHED_STATUS:
           if not memcache.set(item, to_be_cached):
               logging.error("Memcache set failed.")
+
+  def head(self, base_url):
+    fetched_content = self.fetch_content(urlfetch.HEAD, self.request.path_qs, self.request.headers)
+    if fetched_content is not None:
+        self.content_response(fetched_content, 0)
 
   def post(self, base_url):
     fetched_content = self.fetch_content(urlfetch.POST, self.request.path_qs, self.request.headers)
