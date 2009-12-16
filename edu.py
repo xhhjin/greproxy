@@ -18,7 +18,7 @@ from google.appengine.api import users
 
 ######################## Setting area below ########################
 
-TARGET_URL_SHORTER = "drip.lostriver.net"   #the domain which GAE fetch from
+TARGET_URL_SHORTER = "edu.lostriver.net"    #the domain which GAE fetch from
 PROXY_SER_URL = "www.lostriver.net"         #domain of your GAE app
 APP_ID = "lostriver-net"                    #the app-id of GAE
 SHORTLINK_URL = "s.lostriver.net"           #the short-links domain
@@ -189,8 +189,8 @@ class MainPage(webapp.RequestHandler):
           '''response_content["main_content"]=re.sub( \
               r"<CENTER>[\s\S]*?</CENTER>", '', response_content["main_content"])
           response_content["main_content"]=re.sub( \
-              r"<CENTER>[\s\S]*?</CENTER>", '', response_content["main_content"])
-          self.response.out.write(response_content["main_content"])'''
+              r"<CENTER>[\s\S]*?</CENTER>", '', response_content["main_content"])'''
+          self.response.out.write(response_content["main_content"])
 
   def cache_content(self, item, to_be_cached):
       if to_be_cached["code"] in TO_BE_CACHED_STATUS:
@@ -237,9 +237,7 @@ class MainPage(webapp.RequestHandler):
 
     
   def get(self, base_url):
-    if self.request.host == "t.lostriver.net":
-        self.redirect("http://twitter.com/LucienLu")
-    elif ((self.request.host == "s.lostriver.net") or \
+    if ((self.request.host == SHORTLINK_URL) or \
           (self.request.host == "s." + APP_ID + ".appspot.com")):
         short_item = db.get(db.Key.from_path('Short_links', 'N:%s' % self.request.path_qs))
         if not short_item:
@@ -247,17 +245,17 @@ class MainPage(webapp.RequestHandler):
             not_found_error_cont = \
 '''<html><head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
-<title>ShortLinks - 404 - lostriver.net</title>
+<title>ShortLinks - 404 - %s</title>
 <body>
-<h1>Shared by Lostriver.net<br></h1>
+<h1>Shared by %s<br></h1>
 <h3>404 Not Found<br></h3>
 Sorry but what you are looking for does not exist.<br>
-Visit home page <a href="http://www.lostriver.net/">http://www.lostriver.net/</a><br>
+Visit home page <a href="%s">%s</a><br>
 <hr>
 <center>History</center>
 <table width="800" border="1" align="center">
 <tr><td>Share link</td><td>Total click</td><td>Create time(UTC)</td></tr>
-'''
+''' % (APP_ID, APP_ID, "http://" + PROXY_SER_URL, "http://" + PROXY_SER_URL)
 	    self.response.out.write(not_found_error_cont)
             q = db.GqlQuery("select * from Short_links order by create_time desc")
             results = q.fetch(1000)
