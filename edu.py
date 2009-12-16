@@ -159,16 +159,17 @@ class MainPage(webapp.RequestHandler):
                 else:
                     self.response.headers.add_header("Set-Cookie", sc.strip())
       #Modify and add HEADERS
-      for name, address in response_content.items():
           if name.lower()!="main_content" and name.lower()!="code":
+            if name.lower()=="location":
+                address = re.sub(TARGET_URL_SHORTER, \
+                       self.request.environ["HTTP_HOST"], address)
             if self.request.host == APP_ID_HOST:
                 if self.request.environ["SERVER_PORT"] == "443":
                     address = re.sub("http://" + PROXY_SER_URL, \
                                      "https://" + APP_ID_HOST, \
                                      address)
                 address = re.sub(PROXY_SER_URL, \
-                                 APP_ID_HOST, \
-                                 address)
+                                 APP_ID_HOST, address)
             else:
                 address = address
             if name.lower() not in IGNORE_RESPONSE_HEADERS:
@@ -206,13 +207,15 @@ class MainPage(webapp.RequestHandler):
     fetched_content = self.fetch_content(urlfetch.POST, self.request.path_qs, self.request.headers)
     if fetched_content is not None:
         self.content_response(fetched_content, 1)
-        if fetched_content["code"] is 200:
+        if (fetched_content["code"] is 200) and IF_USE_MEMCACHE:
             for name, address in self.request.headers.items():
                 if name.lower() == "referer":
                     item = re.sub(r'(^http://)' + PROXY_SER_URL + '/' , '/', address)
                     #refresh the memcache of referer page
                     #often do not work very well due to the structure of site.
-                    self.cache_content(item ,self.fetch_content(urlfetch.GET, item, {}))
+                    result = self.fetch_content(urlfetch.GET, item, {})
+                    if result is not None:
+                        self.cache_content(item ,result)
 #        self.loggingreq(fetched_content["code"], len(fetched_content["main_content"]), False)
     else:
         count = memcache.get("pending_post_no")
